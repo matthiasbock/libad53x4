@@ -29,8 +29,8 @@ void adc_setup(
                 adc_struct *adc,
                 adc_t       type,
                 uint32_t    spi_device,
-                uint8_t     pin_SCK,
                 uint8_t     pin_nSYNC,
+                uint8_t     pin_SCK,
                 uint8_t     pin_DIN
                 )
 {
@@ -44,27 +44,31 @@ void adc_setup(
     // Initialize and configure SPI device
     spi_disable(spi_device);
 
-    SPI_CONFIG(spi_device) = SPI_BITORDER_MSBFIRST | SPI_CLOCKPOLARITY_ACTIVELOW | SPI_CLOCKPHASE_TRAILING;
-    SPI_FREQUENCY(spi_device) = SPI_FREQUENCY_8M;
-
-    spi_interrupt_upon_READY_enable(spi_device);
-    NVIC_EnableIRQ(INTERRUPT_SPI);
-
-    spi_pin_select(
-                    spi_device,
-                    pin_SCK,            // Clock
-                    pin_DIN,            // MOSI
-                    SPI_PIN_DISABLED    // MISO
-                   );
-
-    // unselect ADC
-
+    // Setup GPIO pins
+    nrf_gpio_pin_dir_set(pin_SCK,   NRF_GPIO_PIN_DIR_OUTPUT);
+    nrf_gpio_pin_dir_set(pin_DIN,   NRF_GPIO_PIN_DIR_OUTPUT);
     nrf_gpio_pin_dir_set(pin_nSYNC, NRF_GPIO_PIN_DIR_OUTPUT);
     nrf_gpio_pin_set(pin_nSYNC);
     /*
     gpio_setup(pin_nSYNC, GPIO_DIRECTION_OUTPUT);
     gpio_write(pin_nSYNC, GPIO_HIGH);
     */
+
+    spi_pin_select(
+                    spi_device,
+                    pin_SCK,            // Clock
+                    pin_DIN,            // MOSI
+                    SPI_PIN_DISABLED    // MISO
+                  );
+
+    SPI_CONFIG(spi_device) = SPI_BITORDER_LSBFIRST | SPI_CLOCKPOLARITY_ACTIVELOW | SPI_CLOCKPHASE_TRAILING;
+    SPI_FREQUENCY(spi_device) = SPI_FREQUENCY_1M;
+
+    spi_enable(adc->spi_device);
+
+    // SPI interrupt is enabled to allow CPU sleep until EVENT ("wait for interrupt" instruction)
+    //spi_interrupt_upon_READY_enable(spi_device);
+    //NVIC_EnableIRQ(INTERRUPT_SPI);
 }
 
 void adc_write(
@@ -91,18 +95,18 @@ void adc_write(
     // clear event
     SPI_EVENT_READY(adc->spi_device) = 0;
 
-    // start transmission
-    spi_enable(adc->spi_device);
-
     // wait for output to complete
+/*
     while (!SPI_EVENT_READY(adc->spi_device))
         asm("wfi");
     SPI_EVENT_READY(adc->spi_device) = 0;
     while (!SPI_EVENT_READY(adc->spi_device))
         asm("wfi");
     SPI_EVENT_READY(adc->spi_device) = 0;
+*/
+    delay_us(15);
     
-    spi_disable(adc->spi_device);
+//    spi_disable(adc->spi_device);
     
     // SPI: unselect slave
     nrf_gpio_pin_set(adc->pin_nSYNC);

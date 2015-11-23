@@ -10,13 +10,21 @@
 
 #include "ad53x4.h"
 #include "../spi_master.h"
+#include "../delay.h"
 
 int main()
 {
     adc_struct ADC;
     adc_struct *HwMon = &ADC;
 
-    adc_setup(HwMon, AD5324, SPI0, 16, 17, 18); 
+    adc_setup(
+                HwMon,
+                AD5324, // type
+                SPI0,   // port
+                21,     // nCS pin
+                22,     // SCLK pin
+                23      // MOSI pin
+             );
     
     // Sawtooth function
     while (1)

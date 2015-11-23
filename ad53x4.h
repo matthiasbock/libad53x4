@@ -15,6 +15,7 @@
 #include "../nrf51.h"
 #include "../core_cm0.h"
 #include "../nrf_gpio.h"
+#include "../delay.h"
 #include "../spi_master.h"
 
 // Chip variants
@@ -48,8 +49,8 @@ void adc_setup(
                 adc_struct *adc,
                 adc_t       type,
                 uint32_t    spi_device,
-                uint8_t     pin_SCK,
                 uint8_t     pin_nSYNC,
+                uint8_t     pin_SCK,
                 uint8_t     pin_DIN
                 );
 
