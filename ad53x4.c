@@ -40,8 +40,12 @@ void adc_setup(
 
     // unselect ADC
 
+    nrf_gpio_pin_dir_set(pin_nSYNC, NRF_GPIO_PIN_DIR_OUTPUT);
+    nrf_gpio_pin_set(pin_nSYNC);
+    /*
     gpio_setup(pin_nSYNC, GPIO_DIRECTION_OUTPUT);
     gpio_write(pin_nSYNC, GPIO_HIGH);
+    */
 }
 
 void adc_write(
@@ -52,13 +56,14 @@ void adc_write(
 {
     // trim value according to chip resolution
     value &= AD53X4_RESOLUTION[adc->type];
-    value << AD53X4_LEFTSHIFT [adc->type];
+    value <<= AD53X4_LEFTSHIFT [adc->type];
     
     // append channel
     value |= (channel << 14);
     
     // SPI: select slave
-    gpio_write(adc->pin_nSYNC, GPIO_LOW);
+    nrf_gpio_pin_clear(adc->pin_nSYNC);
+    //gpio_write(adc->pin_nSYNC, GPIO_LOW);
 
     // SPI_TX is double buffered, so two bytes can be pushed in one go    
     spi_write(adc->spi_device, (uint8_t) (value >> 8));    
@@ -78,8 +83,9 @@ void adc_write(
         asm("wfi");
     SPI_EVENT_READY(adc->spi_device) = 0;
     
-    spi_disable(spi_device);
+    spi_disable(adc->spi_device);
     
     // SPI: unselect slave
-    gpio_write(adc->pin_nSYNC, GPIO_HIGH);
+    nrf_gpio_pin_set(adc->pin_nSYNC);
+    //gpio_write(adc->pin_nSYNC, GPIO_HIGH);
 }

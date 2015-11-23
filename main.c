@@ -9,7 +9,7 @@
  */
 
 #include "ad53x4.h"
-#include "spi_master.h"
+#include "../spi_master.h"
 
 void main()
 {
