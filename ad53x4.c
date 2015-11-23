@@ -9,6 +9,22 @@
  
 #include "ad53x4.h"
 
+// Bitmasks for the corresponding chip variant's resolution
+static uint16_t AD53X4_RESOLUTION[3] =
+{
+    0x00FF,
+    0x03FF,
+    0x0FFF
+};
+
+// How much the value needs to be shifted left to fit the 8-bit SPI frame
+static uint8_t AD53X4_LEFTSHIFT[3] =
+{
+    0,
+    2,
+    4
+};
+
 void adc_setup(
                 adc_struct *adc,
                 adc_t       type,
@@ -18,25 +34,28 @@ void adc_setup(
                 uint8_t     pin_DIN
                 )
 {
+    // Memorize parameters in ADC struct
     adc->type       = type;
     adc->spi_device = spi_device;
     adc->pin_SCK    = pin_SCK;
     adc->pin_nSYNC  = pin_nSYNC;
     adc->pin_DIN    = pin_DIN;
     
-    // initialize and configure SPI device
-
+    // Initialize and configure SPI device
     spi_disable(spi_device);
 
-    SPI_CONFIG = SPI_BITORDER_MSBFIRST | SPI_CLOCKPOLARITY_ACTIVELOW | SPI_CLOCKPHASE_TRAILING; 
+    SPI_CONFIG(spi_device) = SPI_BITORDER_MSBFIRST | SPI_CLOCKPOLARITY_ACTIVELOW | SPI_CLOCKPHASE_TRAILING;
     SPI_FREQUENCY(spi_device) = SPI_FREQUENCY_8M;
 
     spi_interrupt_upon_READY_enable(spi_device);
-    interrupt_enable(INT_SPI);
+    NVIC_EnableIRQ(INTERRUPT_SPI);
 
-    spi_pin_select_SCK (spi_device, pin_SCK);
-    spi_pin_select_MOSI(spi_device, pin_DIN);
-    spi_pin_select_MISO(spi_device, SPI_PIN_DISABLED);
+    spi_pin_select(
+                    spi_device,
+                    pin_SCK,            // Clock
+                    pin_DIN,            // MOSI
+                    SPI_PIN_DISABLED    // MISO
+                   );
 
     // unselect ADC
 
@@ -55,7 +74,7 @@ void adc_write(
                 )
 {
     // trim value according to chip resolution
-    value &= AD53X4_RESOLUTION[adc->type];
+    value  &= AD53X4_RESOLUTION[adc->type];
     value <<= AD53X4_LEFTSHIFT [adc->type];
     
     // append channel
