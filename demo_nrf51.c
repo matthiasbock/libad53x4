@@ -10,13 +10,21 @@
 
 #include "ad53x4.h"
 #include "../spi_master.h"
+#include "../delay.h"
 
-void main()
+int main()
 {
-    ad53x4_t ADC;
-    ad53x4_t *HwMon = &ADC;
+    adc_struct ADC;
+    adc_struct *HwMon = &ADC;
 
-    adc_setup(HwMon, AD5324, SPI0, 16, 17, 18); 
+    adc_setup(
+                HwMon,
+                AD5324,
+                SPI0,
+                21, // nCS
+                22, // SCK
+                23  // MOSI
+             );
     
     // Sawtooth function
     while (1)
@@ -24,17 +32,19 @@ void main()
         uint16_t i;
         
         // up
-        for (i=0; i<2**12; i++)
+        for (i=0; i<(2^12); i++)
         {
             adc_write(HwMon, ADC_OUT_A, i);
             delay_ms(1);
         }
         
         // down
-        for (i=(2**12)-1; i>=0; i--)
+        for (i=(2^12)-1; i>=0; i--)
         {
             adc_write(HwMon, ADC_OUT_A, i);
             delay_ms(1);
         }
     }
+
+    return 0;
 }

@@ -12,8 +12,11 @@
 
 #include <stdint.h>
 
-#include "../spi_master.h"
+//TODO:
+//#include "../cortex_m0.h"
 #include "../nrf_gpio.h"
+#include "../spi_master.h"
+#include "../delay.h"
 
 // Chip variants
 typedef enum
@@ -22,23 +25,6 @@ typedef enum
     AD5314 = 1,
     AD5324 = 2
 } adc_t;
-
-
-// Bitmasks for the corresponding chip variant's resolution
-uint16_t AD53X4_RESOLUTION[3] =
-{
-    0x00FF,
-    0x03FF,
-    0x0FFF
-};
-
-// How much the value needs to be shifted left to fit the 8-bit SPI frame
-uint8_t AD53X4_LEFTSHIFT[3] =
-{
-    0,
-    2,
-    4
-};
 
 // The ADC chip has four output channels
 typedef enum
@@ -49,13 +35,22 @@ typedef enum
     ADC_OUT_D = 3
 } adc_channel_t;
 
+// remember the state of the selected SPI device
+typedef enum
+{
+    IDLE,
+    TRANSMITTING
+} spi_activity_t;
+
+// a struct holding the ADC session parameters
 typedef struct
 {
-    adc_t       type;
-    uint32_t    spi_device;
-    uint8_t     pin_SCK;
-    uint8_t     pin_nSYNC;
-    uint8_t     pin_DIN;
+    adc_t                   adc_type;
+    uint32_t                spi_device;
+    volatile spi_activity_t spi_state;
+    uint8_t                 pin_SCK;
+    uint8_t                 pin_nSYNC;
+    uint8_t                 pin_DIN;
 } adc_struct;
 
 // Configure
@@ -63,8 +58,8 @@ void adc_setup(
                 adc_struct *adc,
                 adc_t       type,
                 uint32_t    spi_device,
-                uint8_t     pin_SCK,
                 uint8_t     pin_nSYNC,
+                uint8_t     pin_SCK,
                 uint8_t     pin_DIN
                 );
 
