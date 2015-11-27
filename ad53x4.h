@@ -15,8 +15,10 @@
 //TODO:
 //#include "../cortex_m0.h"
 #include "../nrf_gpio.h"
+#include "../gpio.h"
 #include "../spi_master.h"
 #include "../delay.h"
+#include "../clock.h"
 
 // Chip variants
 typedef enum
@@ -45,12 +47,12 @@ typedef enum
 // a struct holding the ADC session parameters
 typedef struct
 {
-    adc_t                   adc_type;
-    uint32_t                spi_device;
+             adc_t          adc_type;
+             uint32_t       spi_device;
     volatile spi_activity_t spi_state;
-    uint8_t                 pin_SCK;
-    uint8_t                 pin_nSYNC;
-    uint8_t                 pin_DIN;
+             uint8_t        pin_nCS;
+             uint8_t        pin_SCK;
+             uint8_t        pin_MOSI;
 } adc_struct;
 
 // Configure
@@ -58,9 +60,9 @@ void adc_setup(
                 adc_struct *adc,
                 adc_t       type,
                 uint32_t    spi_device,
-                uint8_t     pin_nSYNC,
+                uint8_t     pin_nCS,
                 uint8_t     pin_SCK,
-                uint8_t     pin_DIN
+                uint8_t     pin_MOSI
                 );
 
 // Use

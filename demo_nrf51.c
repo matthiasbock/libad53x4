@@ -35,15 +35,18 @@ int main()
         for (i=0; i<(2^12); i++)
         {
             adc_write(HwMon, ADC_OUT_A, i);
-            delay_ms(1);
+            //uart_send(".", 1);
+            delay_ms(2);
         }
         
         // down
         for (i=(2^12)-1; i>=0; i--)
         {
             adc_write(HwMon, ADC_OUT_A, i);
-            delay_ms(1);
+            //uart_send(".", 1);
+            delay_ms(2);
         }
+        //uart_send("\n", 1);
     }
 
     return 0;

@@ -44,17 +44,18 @@ void adc_setup(
                 adc_struct *adc,
                 adc_t       type,
                 uint32_t    spi_device,
-                uint8_t     pin_nSYNC,
+                uint8_t     pin_nCS,
                 uint8_t     pin_SCK,
-                uint8_t     pin_DIN
+                uint8_t     pin_MOSI
                 )
 {
     // apply parameters
     adc->adc_type   = type;
     adc->spi_device = spi_device;
+    adc->spi_state  = IDLE;
+    adc->pin_nCS    = pin_nCS;
     adc->pin_SCK    = pin_SCK;
-    adc->pin_nSYNC  = pin_nSYNC;
-    adc->pin_DIN    = pin_DIN;
+    adc->pin_MOSI   = pin_MOSI;
     
     /*
      * Initialize SPI device
@@ -63,44 +64,55 @@ void adc_setup(
     // make sure, the selected SPI device is disabled
     spi_disable(spi_device);
 
-    // then configure parameters
-    SPI_CONFIG(spi_device) = SPI_BITORDER_MSBFIRST
-                           | SPI_CLOCKPOLARITY_ACTIVELOW
-                           | SPI_CLOCKPHASE_TRAILING;
-    SPI_FREQUENCY(spi_device) = SPI_FREQUENCY_125K;
+    // setup GPIO pins
+    nrf_gpio_pin_dir_set(pin_nCS,   NRF_GPIO_PIN_DIR_OUTPUT);
+    nrf_gpio_pin_dir_set(pin_SCK,   NRF_GPIO_PIN_DIR_OUTPUT);
+    nrf_gpio_pin_dir_set(pin_MOSI,  NRF_GPIO_PIN_DIR_OUTPUT);
+/*
+    GPIO_PIN_CNF[pin_nCS]   = GPIO_OUTPUT
+                            | GPIO_INPUTBUFFER_CONNECT
+                            | GPIO_NOPULL
+                            | GPIO_DRIVE_S0S1
+                            | GPIO_SENSE_DISABLED;
+    GPIO_PIN_CNF[pin_SCK]   = 1;
+    GPIO_PIN_CNF[pin_MOSI]  = 1;
+*/
+    // Chip Select = HIGH (ADC not selected)
+    nrf_gpio_pin_set(pin_nCS);
+    /*
+    TODO:
+    gpio_setup(pin_nCS, OUTPUT);
+    gpio_set(pin_nCS, HIGH);
+    */
 
-    // select the pins to use
+    // select SPI pins
     spi_pin_select(
                     spi_device,
                     pin_SCK,            // SCK
-                    pin_DIN,            // MOSI
+                    pin_MOSI,           // MOSI
                     SPI_PIN_DISABLED    // MISO
                   );
 
-    // setup the selected pins
-    nrf_gpio_pin_dir_set(pin_nSYNC, NRF_GPIO_PIN_DIR_OUTPUT);
-    nrf_gpio_pin_dir_set(pin_DIN,   NRF_GPIO_PIN_DIR_OUTPUT);
-    nrf_gpio_pin_dir_set(pin_SCK,   NRF_GPIO_PIN_DIR_OUTPUT);
-    // Chip Select = HIGH (ADC not selected)
-    nrf_gpio_pin_set(pin_nSYNC);
-    /*
-    TODO:
-    gpio_setup(pin_nSYNC, OUTPUT);
-    gpio_set(pin_nSYNC, HIGH);
-    */
+    // configure SPI parameters
+    SPI_CONFIG(spi_device)      = SPI_BITORDER_MSBFIRST
+                                | SPI_CLOCKPOLARITY_ACTIVELOW
+                                | SPI_CLOCKPHASE_TRAILING;
+    SPI_FREQUENCY(spi_device)   = SPI_FREQUENCY_125K;
 
     // enable interrupt, so that we know, when a transmission is complete
-    spi_interrupt_upon_READY_enable(spi_device);
-    //TODO:
+    //spi_interrupt_upon_READY_enable(spi_device);
+    //TODO: use own NVIC routines from cortex_m0.h
     //interrupt_enable(INTERRUPT_SPI);
-    NVIC_EnableIRQ(INTERRUPT_SPI);
+    //NVIC_EnableIRQ(INTERRUPT_SPI);
 
     // configure interrupt handler to clear TRANSMITTING flag
-    adc->spi_state = IDLE;
     if (spi_device == SPI0)
         adc_at_spi0 = adc;
     else if (spi_device == SPI1)
         adc_at_spi1 = adc;
+
+    // we are ready to go
+    spi_enable(spi_device);
 }
 
 void adc_write(
@@ -117,28 +129,28 @@ void adc_write(
     value  |= (channel << 14);
     
     // SPI: select slave
-    nrf_gpio_pin_clear(adc->pin_nSYNC);
+    nrf_gpio_pin_clear(adc->pin_nCS);
     //TODO:
-    //gpio_set(adc->pin_nSYNC, LOW);
+    //gpio_set(adc->pin_nCS, LOW);
 
     // SPI_TX is double buffered, so two bytes can be pushed in one go    
-    spi_write(adc->spi_device, (uint8_t) (value >> 8));    
-    spi_write(adc->spi_device, (uint8_t) (value & 0xFF));
+    spi_write(adc->spi_device, 0xF0); // (uint8_t) (value >> 8)
+    spi_write(adc->spi_device, 0x23); //(uint8_t) (value & 0xFF));
 
     // clear event flag
     SPI_EVENT_READY(adc->spi_device) = 0;
     adc->spi_state = TRANSMITTING;
 
     // wait for output to complete
+    /* TODO: somehow it doesn't work with interrupts and flags
     while (adc->spi_state == TRANSMITTING)
         asm("wfi");
-    //delay_us(150);
+    */
+    delay_us(150);
 
     // SPI: unselect slave
     // Unselect slave first, so that it's faster free to begin processing the values.
-    nrf_gpio_pin_set(adc->pin_nSYNC);
+    nrf_gpio_pin_set(adc->pin_nCS);
     //TODO:
-    //gpio_set(adc->pin_nSYNC, HIGH);
-
-    spi_disable(adc->spi_device);
+    //gpio_set(adc->pin_nCS, HIGH);
 }
