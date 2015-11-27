@@ -12,10 +12,10 @@
 
 #include <stdint.h>
 
-//TODO:
+//TODO: use my own libraries for NVIC stuff and GPIO control
 //#include "../cortex_m0.h"
 #include "../nrf_gpio.h"
-#include "../gpio.h"
+//#include "../gpio.h"
 #include "../spi_master.h"
 #include "../delay.h"
 #include "../clock.h"

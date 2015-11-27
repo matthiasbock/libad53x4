@@ -12,18 +12,23 @@
 // Bitmasks for the corresponding chip variant's resolution
 static uint16_t AD53X4_RESOLUTION[3] =
 {
-    0x00FF,
-    0x03FF,
-    0x0FFF
+    0x00FF, // AD5304
+    0x03FF, // AD5314
+    0x0FFF  // AD5324
 };
 
 // How much the value needs to be shifted left to fit the 8-bit SPI frame
 static uint8_t AD53X4_LEFTSHIFT[3] =
 {
-    0,
-    2,
-    4
+    4,      // AD5304
+    2,      // AD5314
+    0       // AD5324
 };
+
+/*
+ * SPI interrupt handlers
+ * Notify a sleeping process, that an SPI device has finished transmitting
+ */
 
 static adc_struct *adc_at_spi0 = 0;
 static adc_struct *adc_at_spi1 = 0;
@@ -77,15 +82,15 @@ void adc_setup(
     GPIO_PIN_CNF[pin_SCK]   = 1;
     GPIO_PIN_CNF[pin_MOSI]  = 1;
 */
-    // Chip Select = HIGH (ADC not selected)
+    // Chip Select = HIGH: ADC not selected
     nrf_gpio_pin_set(pin_nCS);
     /*
-    TODO:
+    TODO: use gpio.h instead of nrf_gpio.h
     gpio_setup(pin_nCS, OUTPUT);
     gpio_set(pin_nCS, HIGH);
     */
 
-    // select SPI pins
+    // select GPIO pins for SPI device
     spi_pin_select(
                     spi_device,
                     pin_SCK,            // SCK
@@ -97,7 +102,7 @@ void adc_setup(
     SPI_CONFIG(spi_device)      = SPI_BITORDER_MSBFIRST
                                 | SPI_CLOCKPOLARITY_ACTIVELOW
                                 | SPI_CLOCKPHASE_TRAILING;
-    SPI_FREQUENCY(spi_device)   = SPI_FREQUENCY_125K;
+    SPI_FREQUENCY(spi_device)   = SPI_FREQUENCY_1M;
 
     // enable interrupt, so that we know, when a transmission is complete
     //spi_interrupt_upon_READY_enable(spi_device);
@@ -116,40 +121,42 @@ void adc_setup(
 }
 
 void adc_write(
-                adc_struct *adc,
-                adc_channel_t channel,
-                uint16_t value
+                adc_struct     *adc,
+                adc_channel_t   channel,
+                uint16_t        value
                 )
 {
     // trim value according to chip resolution
     value  &= AD53X4_RESOLUTION[adc->adc_type];
-    value <<= AD53X4_LEFTSHIFT [adc->adc_type];
-    
+
+    //TODO: The following line causes the SPI MOSI to stay low
+    //value <<= AD53X4_LEFTSHIFT [adc->adc_type];
+
     // append channel
     value  |= (channel << 14);
-    
+
+    // clear event flag
+    SPI_EVENT_READY(adc->spi_device) = 0;
+    adc->spi_state = TRANSMITTING;
+
     // SPI: select slave
     nrf_gpio_pin_clear(adc->pin_nCS);
     //TODO:
     //gpio_set(adc->pin_nCS, LOW);
 
-    // SPI_TX is double buffered, so two bytes can be pushed in one go    
-    spi_write(adc->spi_device, 0xF0); // (uint8_t) (value >> 8)
-    spi_write(adc->spi_device, 0x23); //(uint8_t) (value & 0xFF));
-
-    // clear event flag
-    SPI_EVENT_READY(adc->spi_device) = 0;
-    adc->spi_state = TRANSMITTING;
+    // SPI_TX is double buffered, so two bytes can be pushed in one go
+    spi_write(adc->spi_device, (value >> 8) & 0x000000FF);
+    // transmission starts about 0-5us after write
+    spi_write(adc->spi_device, (value & 0x000000FF));
 
     // wait for output to complete
     /* TODO: somehow it doesn't work with interrupts and flags
     while (adc->spi_state == TRANSMITTING)
         asm("wfi");
     */
-    delay_us(150);
+    delay_us(14);
 
     // SPI: unselect slave
-    // Unselect slave first, so that it's faster free to begin processing the values.
     nrf_gpio_pin_set(adc->pin_nCS);
     //TODO:
     //gpio_set(adc->pin_nCS, HIGH);

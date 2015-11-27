@@ -36,7 +36,7 @@ int main()
         {
             adc_write(HwMon, ADC_OUT_A, i);
             //uart_send(".", 1);
-            delay_ms(2);
+            delay_us(5);
         }
         
         // down
@@ -44,7 +44,7 @@ int main()
         {
             adc_write(HwMon, ADC_OUT_A, i);
             //uart_send(".", 1);
-            delay_ms(2);
+            delay_us(5);
         }
         //uart_send("\n", 1);
     }
