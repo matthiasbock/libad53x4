@@ -12,11 +12,11 @@
 
 #include <stdint.h>
 
-#include "../nrf51.h"
-#include "../core_cm0.h"
+//TODO:
+//#include "../cortex_m0.h"
 #include "../nrf_gpio.h"
-#include "../delay.h"
 #include "../spi_master.h"
+#include "../delay.h"
 
 // Chip variants
 typedef enum
@@ -35,13 +35,22 @@ typedef enum
     ADC_OUT_D = 3
 } adc_channel_t;
 
+// remember the state of the selected SPI device
+typedef enum
+{
+    IDLE,
+    TRANSMITTING
+} spi_activity_t;
+
+// a struct holding the ADC session parameters
 typedef struct
 {
-    adc_t       type;
-    uint32_t    spi_device;
-    uint8_t     pin_SCK;
-    uint8_t     pin_nSYNC;
-    uint8_t     pin_DIN;
+    adc_t                   adc_type;
+    uint32_t                spi_device;
+    volatile spi_activity_t spi_state;
+    uint8_t                 pin_SCK;
+    uint8_t                 pin_nSYNC;
+    uint8_t                 pin_DIN;
 } adc_struct;
 
 // Configure

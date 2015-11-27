@@ -19,11 +19,11 @@ int main()
 
     adc_setup(
                 HwMon,
-                AD5324, // type
-                SPI0,   // port
-                21,     // nCS pin
-                22,     // SCLK pin
-                23      // MOSI pin
+                AD5324,
+                SPI0,
+                21, // nCS
+                22, // SCK
+                23  // MOSI
              );
     
     // Sawtooth function
