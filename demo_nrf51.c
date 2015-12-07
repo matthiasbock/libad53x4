@@ -12,8 +12,6 @@
 #include "../spi_master.h"
 #include "../delay.h"
 
-#define INTER_WRITE_DELAY 20
-
 int main()
 {
     adc_struct ADC;
@@ -33,28 +31,20 @@ int main()
     {
         uint16_t i;
 
-        for (i=0; i<20000; i++)
+        for (i=0; i<4095; i++)
         {
             adc_write(HwMon, ADC_OUT_A, i);
-            delay_us(INTER_WRITE_DELAY);
             adc_write(HwMon, ADC_OUT_B, i);
-            delay_us(INTER_WRITE_DELAY);
             adc_write(HwMon, ADC_OUT_C, i);
-            delay_us(INTER_WRITE_DELAY);
             adc_write(HwMon, ADC_OUT_D, i);
-            delay_us(INTER_WRITE_DELAY);
         }
 
-        for (i=0; i<20000; i++)
+        for (i=4095; i>0; i--)
         {
-            adc_write(HwMon, ADC_OUT_A, 20000-i);
-            delay_us(INTER_WRITE_DELAY);
-            adc_write(HwMon, ADC_OUT_B, 20000-i);
-            delay_us(INTER_WRITE_DELAY);
-            adc_write(HwMon, ADC_OUT_C, 20000-i);
-            delay_us(INTER_WRITE_DELAY);
-            adc_write(HwMon, ADC_OUT_D, 20000-i);
-            delay_us(INTER_WRITE_DELAY);
+            adc_write(HwMon, ADC_OUT_A, i);
+            adc_write(HwMon, ADC_OUT_B, i);
+            adc_write(HwMon, ADC_OUT_C, i);
+            adc_write(HwMon, ADC_OUT_D, i);
         }
     }
 
