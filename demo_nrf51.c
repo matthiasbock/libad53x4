@@ -12,6 +12,8 @@
 #include "../spi_master.h"
 #include "../delay.h"
 
+#define INTER_WRITE_DELAY 20
+
 int main()
 {
     adc_struct ADC;
@@ -21,32 +23,39 @@ int main()
                 HwMon,
                 AD5324,
                 SPI0,
-                21, // nCS
-                22, // SCK
-                23  // MOSI
+                7, // nCS
+                5, // SCK
+                6  // MOSI
              );
     
     // Sawtooth function
     while (1)
     {
         uint16_t i;
-        
-        // up
-        for (i=0; i<(2^12); i++)
+
+        for (i=0; i<20000; i++)
         {
             adc_write(HwMon, ADC_OUT_A, i);
-            //uart_send(".", 1);
-            delay_us(5);
+            delay_us(INTER_WRITE_DELAY);
+            adc_write(HwMon, ADC_OUT_B, i);
+            delay_us(INTER_WRITE_DELAY);
+            adc_write(HwMon, ADC_OUT_C, i);
+            delay_us(INTER_WRITE_DELAY);
+            adc_write(HwMon, ADC_OUT_D, i);
+            delay_us(INTER_WRITE_DELAY);
         }
-        
-        // down
-        for (i=(2^12)-1; i>=0; i--)
+
+        for (i=0; i<20000; i++)
         {
-            adc_write(HwMon, ADC_OUT_A, i);
-            //uart_send(".", 1);
-            delay_us(5);
+            adc_write(HwMon, ADC_OUT_A, 20000-i);
+            delay_us(INTER_WRITE_DELAY);
+            adc_write(HwMon, ADC_OUT_B, 20000-i);
+            delay_us(INTER_WRITE_DELAY);
+            adc_write(HwMon, ADC_OUT_C, 20000-i);
+            delay_us(INTER_WRITE_DELAY);
+            adc_write(HwMon, ADC_OUT_D, 20000-i);
+            delay_us(INTER_WRITE_DELAY);
         }
-        //uart_send("\n", 1);
     }
 
     return 0;

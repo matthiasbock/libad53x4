@@ -108,7 +108,7 @@ void adc_setup(
     SPI_CONFIG(spi_device)      = SPI_BITORDER_MSBFIRST
                                 | SPI_CLOCKPOLARITY_ACTIVELOW
                                 | SPI_CLOCKPHASE_LEADING;
-    SPI_FREQUENCY(spi_device)   = SPI_FREQUENCY_1M;
+    SPI_FREQUENCY(spi_device)   = SPI_FREQUENCY_250K;
 
     // enable interrupt, so that we know, when a transmission is complete
     //spi_interrupt_upon_READY_enable(spi_device);
@@ -141,6 +141,14 @@ void adc_write(
     // select channel
     value  |= (channel << 14);
 
+    // nLDAC
+    if (channel == ADC_OUT_D)
+        // clear nLDAC: update all outputs after transmission completion
+        value &= ~(1 << 12);
+    else
+        // set nLDAC: only update input register, don't change output
+        value |= (1 << 12);
+
     // no power-down (nPD)
     value |= (1 << 13);
 
@@ -153,6 +161,8 @@ void adc_write(
     //TODO:
     //gpio_set(adc->pin_nCS, LOW);
 
+    delay_us(5);
+
     // SPI_TX is double buffered, so two bytes can be pushed in one go
     spi_write(adc->spi_device, (value >> 8) & 0xFF);
     // transmission starts about 0-5us after write
@@ -163,7 +173,11 @@ void adc_write(
     while (adc->spi_state == TRANSMITTING)
         asm("wfi");
     */
-    delay_us(14);
+    // for 1 MHz: 14us
+    delay_us(64);
+
+    // this has no effect:
+    //nrf_gpio_pin_clear(adc->pin_MOSI);
 
     // SPI: unselect slave
     nrf_gpio_pin_set(adc->pin_nCS);
