@@ -84,6 +84,12 @@ void adc_setup(
 */
     // Chip Select = HIGH: ADC not selected
     nrf_gpio_pin_set(pin_nCS);
+
+    // GPIO pull settings on the SCK pin have no effect
+
+    // For clarity on the oscilloscope, the level between transmissions should be LOW:
+    NRF_GPIO->PIN_CNF[pin_MOSI] |= (GPIO_PIN_CNF_PULL_Pulldown << GPIO_PIN_CNF_PULL_Pos);
+
     /*
     TODO: use gpio.h instead of nrf_gpio.h
     gpio_setup(pin_nCS, OUTPUT);
@@ -101,7 +107,7 @@ void adc_setup(
     // configure SPI parameters
     SPI_CONFIG(spi_device)      = SPI_BITORDER_MSBFIRST
                                 | SPI_CLOCKPOLARITY_ACTIVELOW
-                                | SPI_CLOCKPHASE_TRAILING;
+                                | SPI_CLOCKPHASE_LEADING;
     SPI_FREQUENCY(spi_device)   = SPI_FREQUENCY_1M;
 
     // enable interrupt, so that we know, when a transmission is complete
@@ -132,8 +138,11 @@ void adc_write(
     //TODO: The following line causes the SPI MOSI to stay low
     //value <<= AD53X4_LEFTSHIFT [adc->adc_type];
 
-    // append channel
+    // select channel
     value  |= (channel << 14);
+
+    // no power-down (nPD)
+    value |= (1 << 13);
 
     // clear event flag
     SPI_EVENT_READY(adc->spi_device) = 0;
@@ -145,9 +154,9 @@ void adc_write(
     //gpio_set(adc->pin_nCS, LOW);
 
     // SPI_TX is double buffered, so two bytes can be pushed in one go
-    spi_write(adc->spi_device, (value >> 8) & 0x000000FF);
+    spi_write(adc->spi_device, (value >> 8) & 0xFF);
     // transmission starts about 0-5us after write
-    spi_write(adc->spi_device, (value & 0x000000FF));
+    spi_write(adc->spi_device, (value & 0xFF));
 
     // wait for output to complete
     /* TODO: somehow it doesn't work with interrupts and flags
