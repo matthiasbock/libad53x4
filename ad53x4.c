@@ -85,10 +85,7 @@ void adc_setup(
     // Chip Select = HIGH: ADC not selected
     nrf_gpio_pin_set(pin_nCS);
 
-    // GPIO pull settings on the SCK pin have no effect
-
-    // For clarity on the oscilloscope, the level between transmissions should be LOW:
-    NRF_GPIO->PIN_CNF[pin_MOSI] |= (GPIO_PIN_CNF_PULL_Pulldown << GPIO_PIN_CNF_PULL_Pos);
+    // GPIO pull settings on SPI pins have no effect
 
     /*
     TODO: use gpio.h instead of nrf_gpio.h
@@ -108,7 +105,7 @@ void adc_setup(
     SPI_CONFIG(spi_device)      = SPI_BITORDER_MSBFIRST
                                 | SPI_CLOCKPOLARITY_ACTIVELOW
                                 | SPI_CLOCKPHASE_LEADING;
-    SPI_FREQUENCY(spi_device)   = SPI_FREQUENCY_250K;
+    SPI_FREQUENCY(spi_device)   = SPI_FREQUENCY_4M;
 
     // enable interrupt, so that we know, when a transmission is complete
     //spi_interrupt_upon_READY_enable(spi_device);
@@ -161,8 +158,6 @@ void adc_write(
     //TODO:
     //gpio_set(adc->pin_nCS, LOW);
 
-    delay_us(5);
-
     // SPI_TX is double buffered, so two bytes can be pushed in one go
     spi_write(adc->spi_device, (value >> 8) & 0xFF);
     // transmission starts about 0-5us after write
@@ -173,8 +168,12 @@ void adc_write(
     while (adc->spi_state == TRANSMITTING)
         asm("wfi");
     */
+
     // for 1 MHz: 14us
-    delay_us(64);
+    // for 2 MHz: 5us
+    // for 4 MHz: 1us
+    // 8 MHz: too fast for the DAC (or DAC test setup)
+    delay_us(1);
 
     // this has no effect:
     //nrf_gpio_pin_clear(adc->pin_MOSI);
