@@ -9,8 +9,8 @@
  */
 
 #include "ad53x4.h"
-#include "../spi_master.h"
-#include "../delay.h"
+#include "spi_master.h"
+#include "delay.h"
 
 int main()
 {
